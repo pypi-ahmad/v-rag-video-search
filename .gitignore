@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Project Data (Too large for git)
+data/videos/
+data/frames/
+video_db_storage/
+temp_uploads/
+
+# IDE settings
+.vscode/
+.idea/
