@@ -50,8 +50,8 @@ The system follows a standard **RAG (Retrieval Augmented Generation)** pattern a
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/yourusername/V-RAG.git
-cd V-RAG
+git clone https://github.com/pypi-ahmad/v-rag-video-search.git
+cd v-rag-video-search
 
 # Create virtual environment
 python -m venv .venv
