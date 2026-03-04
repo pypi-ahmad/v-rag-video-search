@@ -105,5 +105,5 @@ V-RAG/
 
 ---
 
-**Author:** [Your Name]
+**Author:** Ahmad Mujtaba
 *Built as a Portfolio Project demonstrating Multimodal AI & Vector Search.*

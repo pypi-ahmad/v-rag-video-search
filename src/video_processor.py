@@ -41,7 +41,6 @@ class VideoProcessor:
 
         metadata = []
         frame_count = 0
-        saved_count = 0
 
         try:
             while True:
@@ -78,7 +77,6 @@ class VideoProcessor:
                         'frame_path': file_path,
                         'timestamp': timestamp_ms / 1000.0  # Convert to seconds for easier reading usually
                     })
-                    saved_count += 1
 
                 frame_count += 1
 

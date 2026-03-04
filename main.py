@@ -90,7 +90,7 @@ def main():
         results = db.search(query_embedding, k=3)
         
         for i, res in enumerate(results):
-             print(f"Result {i+1}: Timestamp={res['timestamp']:.2f}s, Score={res['score']:.4f}, Path={res['path']}")
+            print(f"Result {i+1}: Timestamp={res['timestamp']:.2f}s, Score={res['score']:.4f}, Path={res['path']}")
             
     except Exception as e:
         print(f"An error occurred: {e}")
