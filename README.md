@@ -72,10 +72,10 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-  Q[Query: text OR image] --> EQ[Embed query (CLIP)]
-  EQ --> VS[Vector search (ChromaDB)]
-  VS --> R[Top-K results]
-  R --> UI[Render frames + timestamps + scores]
+  Q["Query: text OR image"] --> EQ["Embed query (CLIP)"]
+  EQ --> VS["Vector search (ChromaDB)"]
+  VS --> R["Top-K results"]
+  R --> UI["Render frames + timestamps + scores"]
 ```
 
 ---
