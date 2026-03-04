@@ -232,7 +232,7 @@ def perform_search(query_input, k, threshold, mode="text"):
                 for idx, res in enumerate(batch):
                     with cols[idx]:
                         if os.path.exists(res['path']):
-                            st.image(res['path'], width='stretch')
+                            st.image(res['path'], use_container_width=True)
                             
                             # Info
                             time_str = format_timestamp(res['timestamp'])
