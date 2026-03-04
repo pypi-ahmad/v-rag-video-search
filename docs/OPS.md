@@ -155,6 +155,9 @@ Alternatively, to remove extracted frames too:
 rm -rf video_db_storage/ data/frames/ temp_uploads/ temp_query.jpg
 ```
 
+> **Do not commit `data/frames/` or `video_db_storage/`** — they are generated artifacts
+> (extracted frames and ChromaDB indexes). Both directories are listed in `.gitignore`.
+
 ---
 
 ## 8. Testing
