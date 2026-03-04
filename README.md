@@ -51,12 +51,12 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-  participant U as User
-  participant S as Streamlit (app.py)
-  participant V as VideoProcessor
-  participant E as FrameEmbedder (CLIP)
-  participant C as ChromaDB (VideoSearchDB)
-  participant F as Filesystem (data/frames)
+  participant U as "User"
+  participant S as "Streamlit (app.py)"
+  participant V as "VideoProcessor"
+  participant E as "FrameEmbedder (CLIP)"
+  participant C as "ChromaDB (VideoSearchDB)"
+  participant F as "Filesystem (data/frames)"
 
   U->>S: Upload video + click Process
   S->>V: extract_frames(video)
