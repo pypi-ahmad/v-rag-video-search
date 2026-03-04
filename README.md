@@ -1,6 +1,8 @@
-# V-RAG — Video Search (Retrieval-Augmented Generation for Video)
+# V-RAG — Video Semantic Search (CLIP + ChromaDB)
 
 Local, semantic video search: **upload a video → extract frames → embed with CLIP → store in ChromaDB → search by text or image**.
+
+> This repository currently focuses on **retrieval/search**. A generation (LLM) layer can be added on top of retrieved frames.
 
 🔗 **Repository:** https://github.com/pypi-ahmad/v-rag-video-search.git
 
@@ -95,8 +97,35 @@ flowchart TD
 │   ├── videos/                # Optional: your raw videos (ignored by git)
 │   └── frames/                # Generated frames (ignored by git)
 ├── video_db_storage/          # ChromaDB local storage (ignored by git)
+├── tests/                     # Smoke tests
+├── .github/workflows/ci.yml   # CI workflow
+├── docs/                      # Audit + engineering docs
+├── LICENSE
 └── requirements.txt
 ```
+
+---
+
+## 🧰 Requirements
+
+- **Python:** 3.10+ (tested in CI on 3.12)
+- **OS:** Windows / macOS / Linux
+- **GPU (optional):** CUDA-capable GPU for faster embedding; CPU mode is supported
+
+---
+
+## ⚙️ Configuration
+
+Current defaults and where to change them:
+
+- **Frame sampling interval:** `1` second in `VideoProcessor.extract_frames(..., interval=1)`
+  - Called from `app.py` via `processor.extract_frames(video_path, output_folder, interval=1)`
+- **Top-K results:** `Max Results` slider, default `6` (range `1..20`)
+- **Score threshold:** `Sensitivity Threshold` slider, default `160.0` (range `100.0..200.0`)
+- **Storage paths:**
+  - Frames: `data/frames/<video_name>/...`
+  - Vector DB: `video_db_storage/`
+  - Temp artifacts: `temp_uploads/`, `temp_query.jpg`
 
 ---
 
@@ -145,7 +174,7 @@ streamlit run app.py
 
 1. Open the Streamlit UI
 2. Upload a video file
-3. Click **Process / Index**
+3. Click **Process & Index Video**
 4. Wait for extraction + embedding + DB upsert
 
 **Generated data**
@@ -163,7 +192,7 @@ streamlit run app.py
 * Adjust:
 
   * **Top-K** results
-  * **Score threshold** (if available in UI)
+  * **Score threshold**
 
 ### Search by image/camera
 
@@ -213,6 +242,24 @@ Remove-Item -Recurse -Force data\frames, video_db_storage, temp_uploads
 
 ---
 
+## 🎬 Demo
+
+Add one screenshot or GIF showing indexing and search results.
+
+- Suggested files:
+  - `docs/demo/ui-screenshot.png`
+  - `docs/demo/search-example.gif`
+
+---
+
+## ⚠️ Limitations
+
+- Retrieval-only pipeline (no built-in LLM generation stage)
+- Fixed-interval frame sampling may miss short events
+- Local-only indexing and storage (no multi-user backend)
+
+---
+
 ## 🧭 Roadmap ideas (optional)
 
 * Multi-video library view + per-video filters
@@ -231,9 +278,17 @@ PRs and issues welcome:
 
 ---
 
+## 🙌 Acknowledgements
+
+- OpenAI CLIP via `sentence-transformers`
+- ChromaDB for local vector search
+- Streamlit for the UI
+
+---
+
 ## 📄 License
 
-Add a license file if you plan to publish widely (MIT/Apache-2.0 etc).
+MIT — see [LICENSE](LICENSE).
 
 ---
 
