@@ -1,145 +1,128 @@
 # V-RAG — Phased Upgrade Roadmap
 
-> Each "PR" is an independent, shippable unit of work that can be reviewed and merged on its own. Ordered by risk (safe first) and value.
+> Each PR is an independent, shippable unit. Ordered by risk (safe first) and value.
 
 ---
 
-## PR 1 — Housekeeping & Lint (zero risk) ✅ DONE
+## PR 1 — Housekeeping & Lint ✅ DONE
 
-**Issues addressed:** #13, #14, #16, #17, #18, #19, #20, #10
+**Issues:** #14, #15, #16, #17, #18
 
-| Task | File(s) | Status |
+| Task | Status |
+|---|---|
+| Add `src/__init__.py` | ✅ |
+| Remove unused imports (`Union`, `os`) + dead variables | ✅ |
+| Delete commented-out code in `app.py` | ✅ |
+| Fix 5-space indent in `main.py` | ✅ |
+| Update README author + repo URL | ✅ |
+
+---
+
+## PR 2 — P0 Security + Correctness ✅ DONE
+
+**Issues:** #1, #2, #3, #4
+
+| Task | Status |
+|---|---|
+| Sanitize uploaded filename (`app.py:L67`) | ✅ |
+| Fix DB path to `__file__`-relative (`vector_db.py:L11,L21`) | ✅ |
+| `collection.add()` → `collection.upsert()` (`vector_db.py:L50`) | ✅ |
+| Fix embedding/metadata alignment (`embedder.py:L31–L87`, `app.py:L112–L118`) | ✅ |
+| Empty-embeddings guard + `ValueError` in `add_frames()` (`vector_db.py:L34–L41`) | ✅ |
+
+---
+
+## PR 3 — Resource Cleanup + Deprecation ✅ DONE
+
+**Issues:** #5, #9
+
+| Task | Status |
+|---|---|
+| Delete uploaded video in `try/finally` (`app.py:L145–L148`) | ✅ |
+| Delete `temp_query.jpg` in `try/finally` (`app.py:L190–L193`) | ✅ |
+| `use_container_width=True` (`app.py:L224`) | ✅ |
+
+---
+
+## PR 4 — Structured Logging ✅ DONE
+
+**Issues:** #10
+
+| Task | Status |
+|---|---|
+| Replace all `print()` with `logging` in `embedder.py`, `video_processor.py`, `main.py` | ✅ |
+| `logging.basicConfig()` in `app.py:L11` and `main.py:L8` | ✅ |
+| `logger = logging.getLogger(__name__)` per module | ✅ |
+
+---
+
+## PR 5 — Stable Paths ✅ DONE
+
+**Issues:** #11
+
+| Task | Status |
+|---|---|
+| `temp_uploads/` path anchored to `__file__` (`app.py:L60–L62`) | ✅ |
+| `temp_query.jpg` path anchored to `__file__` (`app.py:L182`) | ✅ |
+
+---
+
+## PR 6 — Pin Dependencies
+
+**Issues:** #6
+
+| Task | Effort | Status |
 |---|---|---|
-| Add `src/__init__.py` (empty) | `src/__init__.py` | ✅ Done |
-| Remove unused imports (`Union`, `os`) from `embedder.py` | `src/embedder.py` | ✅ Done (PR2) |
-| Remove dead `total_batches` variable | `src/embedder.py` | ✅ Done (PR2) |
-| Remove dead `saved_count` variable | `src/video_processor.py:L49` | ✅ Done |
-| Delete commented-out code | `app.py` | ✅ Done |
-| Fix 5-space indentation | `main.py:L92` | ✅ Done |
-| Update README author + URL | `README.md:L110` | ✅ Done |
-
-**Committed as:** `"Housekeeping: lint, dead code cleanup, README fixes"`
+| `pip freeze > requirements.txt` or use `pip-tools` | S | **Open** |
+| Optionally add `requirements-dev.txt` for test deps | S | **Open** |
 
 ---
 
-## PR 2 — P0 Security + Correctness Fixes ✅ DONE
+## PR 7 — Config Externalization
 
-**Issues addressed:** #1, #2, #3, #4
+**Issues:** #13
 
-| Task | File(s) | Status |
+| Task | Effort | Status |
 |---|---|---|
-| Sanitize uploaded filename | `app.py:L65` | ✅ Done |
-| Fix DB path from `os.getcwd()` to `__file__`-relative | `src/vector_db.py:L14,L22` | ✅ Done |
-| Change `collection.add()` → `collection.upsert()` | `src/vector_db.py:L52` | ✅ Done |
-| Fix embedding/metadata alignment: return valid paths from `encode_images()` | `src/embedder.py:L32–L85`, `app.py:L108–L113`, `main.py:L68–L72` | ✅ Done |
-| Empty-embeddings guard in `add_frames()` | `src/vector_db.py:L34–L36` | ✅ Done |
-| `ValueError` on length mismatch in `add_frames()` | `src/vector_db.py:L38–L41` | ✅ Done |
-
-**Committed as:** `"Fix P0 upload safety, DB path stability, and embedding alignment"`
+| Extract magic numbers to `src/config.py` | M | **Open** |
+| Read from env vars with defaults | S | **Open** |
 
 ---
 
-## PR 3 — Resource Cleanup + Deprecation Fix ✅ DONE
+## PR 8 — Add Tests + CI
 
-**Issues addressed:** #5, #9
+**Issues:** #7
 
-| Task | File(s) | Status |
+| Task | Effort | Status |
 |---|---|---|
-| Delete uploaded video after pipeline completes | `app.py:L155–L160` | ✅ Done |
-| Delete `temp_query.jpg` after image search | `app.py:L199–L206` | ✅ Done |
-| Replace `width='stretch'` → `use_container_width=True` | `app.py:L224` | ✅ Done |
-
-**Committed as:** `"Cleanup temp files and fix Streamlit image param"`
+| `tests/test_embedder.py` (encode_text shape, encode_images roundtrip) | M | **Open** |
+| `tests/test_vector_db.py` (add_frames + search roundtrip) | M | **Open** |
+| `tests/test_video_processor.py` (extract from synthetic video) | M | **Open** |
+| `tests/test_app.py` (smoke: format_timestamp, interpret_score) | S | **Open** |
+| `.github/workflows/ci.yml` (lint, compile, import check) | M | **Open** |
 
 ---
 
-## PR 4 — Pin Dependencies
+## PR 9 — Delete Dead Code
 
-**Issues addressed:** #6
+**Issues:** #12
 
-| Task | File(s) | Effort |
+| Task | Effort | Status |
 |---|---|---|
-| Run `pip freeze` and pin all versions in `requirements.txt` | `requirements.txt` | S |
-| Optionally add `requirements-dev.txt` for test deps | `requirements-dev.txt` (new) | S |
-
-**Estimated effort:** 15 minutes  
-**Risk:** Zero
+| Delete `main.py` or move to `scripts/dev_test.py` | S | **Open** |
 
 ---
 
-## PR 5 — Structured Logging
+## Timeline
 
-**Issues addressed:** #12
-
-| Task | File(s) | Effort |
+| PR | Priority | Status |
 |---|---|---|
-| Replace all `print()` with `logging.info/warning/error` | All `.py` files | M |
-| Add `logging.basicConfig(level=…, format=…)` in `app.py` and `main.py` | `app.py:L1`, `main.py:L1` | S |
-| Use `logger = logging.getLogger(__name__)` per module | `src/embedder.py`, `src/vector_db.py`, `src/video_processor.py` | S |
-
-**Estimated effort:** 1–2 hours  
-**Risk:** Low — changes output from stdout to stderr (logging default)
-
----
-
-## PR 6 — Config Externalization
-
-**Issues addressed:** #15
-
-| Task | File(s) | Effort |
-|---|---|---|
-| Create `config.py` with all constants | `src/config.py` (new) | S |
-| Extract: `FRAME_INTERVAL`, `RESIZE_HEIGHT`, `BATCH_SIZE_GPU`, `BATCH_SIZE_CPU`, `SCORE_HIGH`, `SCORE_MED`, `DEFAULT_THRESHOLD`, `DB_PATH`, `COLLECTION_NAME` | `app.py`, `src/*.py` | M |
-| Optionally read from env vars with defaults | `src/config.py` | S |
-
-**Estimated effort:** 1–2 hours  
-**Risk:** Low — replaces magic numbers with named imports
-
----
-
-## PR 7 — Add Tests + CI
-
-**Issues addressed:** #7
-
-| Task | File(s) | Effort |
-|---|---|---|
-| Add `pytest` + `pytest-cov` to `requirements-dev.txt` | `requirements-dev.txt` | S |
-| `tests/test_video_processor.py`: extract frames from a 3-second synthetic video | `tests/` (new) | M |
-| `tests/test_embedder.py`: `encode_text()` returns (512,), `encode_images()` with 1 JPEG returns (1, 512) | `tests/` (new) | M |
-| `tests/test_vector_db.py`: roundtrip `add_frames()` + `search()` on temp collection | `tests/` (new) | M |
-| `tests/test_app.py`: smoke test `format_timestamp`, `interpret_score` | `tests/` (new) | S |
-| `.github/workflows/ci.yml`: install deps, run `pytest`, lint with `ruff` | `.github/workflows/` (new) | M |
-
-**Estimated effort:** 4–6 hours  
-**Risk:** Zero to existing code — additive only
-
----
-
-## PR 8 — Delete Dead Code
-
-**Issues addressed:** #11
-
-| Task | File(s) | Effort |
-|---|---|---|
-| Delete `main.py` or move to `scripts/dev_test.py` | `main.py` | S |
-| Update README to remove `main.py` CLI mention | `README.md` | S |
-
-**Estimated effort:** 15 minutes  
-**Risk:** Low — must confirm nothing imports it (confirmed: nothing does)
-
----
-
-## Timeline Summary
-
-| PR | Contents | Priority | Status | Depends On |
-|---|---|---|---|---|
-| PR 1 | Housekeeping | P2 | ✅ **Done** | — |
-| PR 2 | P0 security + correctness | P0 | ✅ **Done** | — |
-| PR 3 | Temp file cleanup | P1 | ✅ **Done** | — |
-| PR 4 | Pin deps | P1 | Open | — |
-| PR 5 | Logging | P2 | Partial (app.py, embedder, vector_db done) | — |
-| PR 6 | Config system | P2 | Open | — |
-| PR 7 | Tests + CI | P1 | Open | PR 2 ✅ |
-| PR 8 | Remove dead code | P2 | Open | PR 7 |
-
-**Recommended merge order:** PR 1 → PR 2 → PR 3 → PR 4 → PR 5 → PR 6 → PR 7 → PR 8
+| PR 1 Housekeeping | P2 | ✅ Done |
+| PR 2 P0 Fixes | P0 | ✅ Done |
+| PR 3 Cleanup | P1 | ✅ Done |
+| PR 4 Logging | P1 | ✅ Done |
+| PR 5 Stable Paths | P1 | ✅ Done |
+| PR 6 Pin Deps | P1 | Open |
+| PR 7 Config | P2 | Open |
+| PR 8 Tests + CI | P1 | Open |
+| PR 9 Dead Code | P2 | Open |
