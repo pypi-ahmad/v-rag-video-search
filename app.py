@@ -53,12 +53,14 @@ def interpret_score(score):
 def save_uploaded_file(uploaded_file):
     """Saves uploaded video to a temp path (filename is sanitized)."""
     try:
-        # Create temp dir
-        os.makedirs("temp_uploads", exist_ok=True)
+        # Create temp dir (anchored to this file, not CWD)
+        _app_dir = os.path.dirname(os.path.abspath(__file__))
+        temp_dir = os.path.join(_app_dir, "temp_uploads")
+        os.makedirs(temp_dir, exist_ok=True)
         
         # Sanitize: strip any directory components from the user-supplied name
         safe_name = pathlib.Path(uploaded_file.name).name
-        file_path = os.path.join("temp_uploads", safe_name)
+        file_path = os.path.join(temp_dir, safe_name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         return file_path
@@ -198,7 +200,8 @@ def perform_search(query_input, k, threshold, mode="text"):
                 query_emb = embedder.encode_text(query_input)
             else:
                 # Image embedding — save temp image because our embedder expects paths
-                temp_query_path = "temp_query.jpg"
+                # Use __file__-relative path so it works regardless of CWD
+                temp_query_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_query.jpg")
                 try:
                     query_input.save(temp_query_path)
                     query_embs, _ = embedder.encode_images([temp_query_path], batch_size=1)

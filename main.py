@@ -1,8 +1,12 @@
+import logging
 import os
 import glob
 from src.video_processor import VideoProcessor
 from src.embedder import FrameEmbedder
 from src.vector_db import VideoSearchDB
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+logger = logging.getLogger(__name__)
 
 def initialize_folders():
     """Creates the necessary folder structure."""
@@ -14,7 +18,7 @@ def initialize_folders():
     
     for folder in folders:
         os.makedirs(folder, exist_ok=True)
-        print(f"Verified folder: {folder}")
+        logger.info("Verified folder: %s", folder)
 
 def main():
     # 1. Initialize project structure
@@ -28,34 +32,33 @@ def main():
                   glob.glob(os.path.join(video_folder, "*.mkv"))
     
     if not video_files:
-        print(f"No videos found in {video_folder}. Please add a video file to test the processor.")
-        # Create a dummy file to ensure folder exists in git/view if empty, strictly not needed but good for structure
+        logger.warning("No videos found in %s. Please add a video file to test the processor.", video_folder)
         return
 
     video_path = video_files[0]
-    print(f"Processing video: {video_path}")
+    logger.info("Processing video: %s", video_path)
     
     output_folder = os.path.join("data", "frames", os.path.splitext(os.path.basename(video_path))[0])
     
     # 3. Run Processor
     processor = VideoProcessor()
     
-    print("Extracting frames...")
+    logger.info("Extracting frames...")
     try:
         metadata = processor.extract_frames(video_path, output_folder, interval=1)
         
-        # 4. Print results
-        print(f"Successfully extracted {len(metadata)} frames.")
-        print(f"Frames saved to: {output_folder}")
+        # 4. Log results
+        logger.info("Successfully extracted %d frames.", len(metadata))
+        logger.info("Frames saved to: %s", output_folder)
         if metadata:
-            print(f"Sample metadata: {metadata[0]}")
+            logger.info("Sample metadata: %s", metadata[0])
         
         # 5. Generate Embeddings (Phase 2)
-        print("\n--- Phase 2: Generating Embeddings ---")
+        logger.info("--- Phase 2: Generating Embeddings ---")
         
         # Use metadata to get paths to ensure alignment between embeddings and metadata
         if not metadata:
-            print("No frames found to embed.")
+            logger.warning("No frames found to embed.")
             return
 
         image_paths = [m['frame_path'] for m in metadata]
@@ -64,7 +67,7 @@ def main():
         embeddings, valid_paths = embedder.encode_images(image_paths)
         
         if embeddings.shape[0] == 0:
-            print("ERROR: No frames could be embedded. Aborting.")
+            logger.error("No frames could be embedded. Aborting.")
             return
 
         # Rebuild metadata aligned to valid_paths (preserves row order)
@@ -74,26 +77,29 @@ def main():
             f"Alignment check failed: {len(embeddings)} embeddings vs {len(metadata)} metadata"
         )
         
-        print(f"Generated embeddings with shape: {embeddings.shape}")
+        logger.info("Generated embeddings with shape: %s", embeddings.shape)
         
         # 6. Store in Vector DB (Phase 3)
-        print("\n--- Phase 3: Storing in Vector DB ---")
+        logger.info("--- Phase 3: Storing in Vector DB ---")
         db = VideoSearchDB()
         db.add_frames(embeddings, metadata)
         
         # 7. Sanity Check Search
-        print("\n--- Sanity Check Search ---")
+        logger.info("--- Sanity Check Search ---")
         query_text = "traffic congestion"  # Change this to something relevant to your video
-        print(f"Query: '{query_text}'")
+        logger.info("Query: '%s'", query_text)
         
         query_embedding = embedder.encode_text(query_text)
         results = db.search(query_embedding, k=3)
         
         for i, res in enumerate(results):
-            print(f"Result {i+1}: Timestamp={res['timestamp']:.2f}s, Score={res['score']:.4f}, Path={res['path']}")
-            
+            logger.info(
+                "Result %d: Timestamp=%.2fs, Score=%.4f, Path=%s",
+                i + 1, res['timestamp'], res['score'], res['path'],
+            )
+
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error("An error occurred: %s", e, exc_info=True)
 
 if __name__ == "__main__":
     main()
