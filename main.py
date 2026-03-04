@@ -61,7 +61,18 @@ def main():
         image_paths = [m['frame_path'] for m in metadata]
 
         embedder = FrameEmbedder()
-        embeddings = embedder.encode_images(image_paths)
+        embeddings, valid_paths = embedder.encode_images(image_paths)
+        
+        if embeddings.shape[0] == 0:
+            print("ERROR: No frames could be embedded. Aborting.")
+            return
+
+        # Rebuild metadata aligned to valid_paths (preserves row order)
+        meta_by_path = {m['frame_path']: m for m in metadata}
+        metadata = [meta_by_path[p] for p in valid_paths if p in meta_by_path]
+        assert len(embeddings) == len(metadata), (
+            f"Alignment check failed: {len(embeddings)} embeddings vs {len(metadata)} metadata"
+        )
         
         print(f"Generated embeddings with shape: {embeddings.shape}")
         
