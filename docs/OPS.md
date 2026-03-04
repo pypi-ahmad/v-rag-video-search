@@ -6,201 +6,144 @@
 
 | Requirement | Minimum | Notes |
 |---|---|---|
-| Python | 3.10+ | Bytecache suggests 3.13 is in use (`src/__pycache__/`) |
+| Python | 3.10+ | Bytecache confirms 3.13 in use |
 | pip | Latest | For `--extra-index-url` support |
 | GPU (optional) | CUDA 13.0-compatible NVIDIA GPU | Falls back to CPU automatically |
-| Disk space | ~1 GB | For video frames, mode weights (~350MB for CLIP ViT-B-32), and ChromaDB |
+| Disk | ~1 GB | Frames + model (~350 MB) + ChromaDB |
 | RAM | ~4 GB | Minimum for CPU-only inference |
 
 ---
 
 ## 2. Installation
 
-### Step 1: Clone
-
 ```bash
-git clone <repo-url>
-cd "Video Retrieval Augmented Generation"
-```
-
-### Step 2: Create Virtual Environment
-
-```bash
+git clone https://github.com/pypi-ahmad/v-rag-video-search.git
+cd v-rag-video-search
 python -m venv .venv
 
-# Activate — Windows (PowerShell):
+# Windows:
 .venv\Scripts\Activate.ps1
-
-# Activate — Windows (CMD):
-.venv\Scripts\activate.bat
-
-# Activate — Mac/Linux:
+# Mac/Linux:
 source .venv/bin/activate
-```
 
-### Step 3: Install Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-**What this installs** (`requirements.txt`):
+**CUDA note:** `requirements.txt:L1` specifies `--extra-index-url https://download.pytorch.org/whl/cu130`. Falls back to CPU if no compatible GPU.
 
-| Package | Purpose |
-|---|---|
-| `torch` (cu130 wheel) | GPU tensor operations for CLIP inference |
-| `torchvision` | Vision utilities used by PyTorch |
-| `opencv-python` | Video decoding and frame extraction |
-| `pillow` | PIL image loading for embedding |
-| `sentence-transformers` | CLIP ViT-B-32 model wrapper |
-| `chromadb` | Embedded vector database |
-| `streamlit` | Web UI framework |
-| `tqdm` | Progress bars in CLI/embedding loop |
-
-**CUDA note:** `requirements.txt:L1` includes `--extra-index-url https://download.pytorch.org/whl/cu130`. If CUDA 13.0 is not available, pip will fall back to the CPU wheel from PyPI. No manual action needed.
-
-**Model download:** `clip-ViT-B-32` (~350 MB) is automatically downloaded from HuggingFace Hub on first run of `FrameEmbedder.__init__()` — `embedder.py:L20`. Requires internet access on first run only.
+**Model download:** `clip-ViT-B-32` (~350 MB) auto-downloads from HuggingFace on first `FrameEmbedder.__init__()` — `embedder.py:L23`.
 
 ---
 
-## 3. Running the Application
+## 3. Running
 
-### Primary: Streamlit UI
+### Streamlit UI (Primary)
 
 ```bash
 streamlit run app.py
-```
+# Opens http://localhost:8501
 
-Opens at `http://localhost:8501` by default.
-
-**To change port:**
-```bash
+# Custom port:
 streamlit run app.py --server.port 8080
 ```
 
-### Secondary: CLI Driver (Dev/Test)
+### CLI (Dev/Test)
 
 ```bash
 # Requires at least one video in data/videos/
 python main.py
 ```
 
-Hardcoded sanity search query: `"traffic congestion"` — `main.py:L62`
-
 ---
 
-## 4. Using the Application
+## 4. Usage
 
-### Ingest a New Video
+### Ingest a Video
 
 1. Launch `streamlit run app.py`
-2. In the sidebar, select **"Upload New Video"**
-3. Upload an MP4/MOV/AVI file
-4. Click **"🚀 Process & Index Video"**
-5. Wait for the pipeline to complete (progress bar)
+2. Sidebar → **"Upload New Video"** → select MP4/MOV/AVI
+3. Click **"🚀 Process & Index Video"**
+4. Wait for pipeline (progress bar)
 
-### Search with Text
+### Text Search
 
-1. In the **"📝 Text Search"** tab, type a description (e.g., `"red car at intersection"`)
-2. Click **"Search Text"**
-3. Adjust **"Max Results"** (1–20) and **"Sensitivity Threshold"** (100–200) sliders in the sidebar to tune results
+Tab **"📝 Text Search"** → type query → click **"Search Text"**.
+Adjust **Max Results** (1–20) and **Threshold** (100–200) in sidebar.
 
-### Search with Camera
+### Camera Search
 
-1. In the **"📸 Camera Search"** tab, allow browser camera access
-2. Take a photo of a reference object
-3. Click **"Search Image"**
+Tab **"📸 Camera Search"** → take photo → click **"Search Image"**.
 
 ---
 
-## 5. Directory Setup
+## 5. Paths & Storage
 
-The app auto-creates these on first run:
+| Path | Created By | Stable? | Notes |
+|---|---|---|---|
+| `video_db_storage/` | `VideoSearchDB.__init__()` | ✅ `__file__`-relative (`vector_db.py:L11,L21`) | Works from any CWD |
+| `temp_uploads/` | `save_uploaded_file()` | ✅ `__file__`-relative (`app.py:L60–L62`) | Auto-cleaned after pipeline |
+| `temp_query.jpg` | `perform_search(mode="image")` | ✅ `__file__`-relative (`app.py:L182`) | Auto-cleaned in `finally` |
+| `data/frames/<name>/` | `process_video_pipeline()` | ⚠️ CWD-relative | Run from repo root |
 
-| Directory | Created By | Evidence |
-|---|---|---|
-| `data/videos/` | `main.py:initialize_folders()` | `main.py:L11` |
-| `data/frames/` | `main.py:initialize_folders()` | `main.py:L11` |
-| `temp_uploads/` | `app.py:save_uploaded_file()` | `app.py:L63` |
-| `video_db_storage/` | `VideoSearchDB.__init__()` | `vector_db.py:L22–L23` (path derived from `__file__`, not CWD) |
-
----
-
-## 6. Environment Variables
-
-**None are used.** All paths are hardcoded.
-
-**CWD note:** The `video_db_storage/` path is now **`__file__`-relative** (`vector_db.py:L14,L22`), so ChromaDB works regardless of where you launch the app from. However, several other paths are still CWD-relative:
-- Frame paths stored in ChromaDB metadata are CWD-relative strings (e.g. `data\frames\...`) — `video_processor.py:L78`
-- `temp_uploads/` is CWD-relative — `app.py:L63`
-- `temp_query.jpg` is written to CWD — `app.py:L198`
-
-**Recommendation:** Run from the repository root to ensure frame paths resolve correctly when displayed in search results.
+> **Do not commit** `data/frames/`, `video_db_storage/`, or `temp_uploads/` — all are in `.gitignore`.
 
 ---
 
-## 7. Resetting the Database
-
-To clear all indexed frames and start fresh:
+## 6. Reset / Cleanup
 
 ```bash
-# From repo root:
-rm -rf video_db_storage/
-# Then restart the app — it will recreate the DB automatically
-```
-
-Alternatively, to remove extracted frames too:
-
-```bash
+# Remove everything:
 rm -rf video_db_storage/ data/frames/ temp_uploads/ temp_query.jpg
+
+# Windows PowerShell:
+Remove-Item -Recurse -Force video_db_storage, data\frames, temp_uploads -ErrorAction SilentlyContinue
 ```
 
-> **Do not commit `data/frames/` or `video_db_storage/`** — they are generated artifacts
-> (extracted frames and ChromaDB indexes). Both directories are listed in `.gitignore`.
+Restart the app — DB is recreated automatically.
 
 ---
 
-## 8. Testing
+## 7. Testing (Manual)
 
-**No automated tests exist in this repository.**
+No automated tests exist yet. Manual checklist:
 
-### Manual Test Checklist
-
-- [ ] Upload a short video (< 30 seconds) — pipeline completes without error
-- [ ] Text search with a relevant query — returns results
-- [ ] Text search with an irrelevant query — returns no results (adjust threshold)
-- [ ] Camera search — takes photo, returns results
-- [ ] Threshold slider — lowering threshold reduces results; raising increases
-- [ ] Re-uploading same video — no crash (ChromaDB upserts)
-- [ ] App restart — existing indexed data is preserved (ChromaDB is persistent)
+- [ ] Upload a short video → pipeline completes
+- [ ] Text search with relevant query → returns results
+- [ ] Camera search → returns results
+- [ ] Re-upload same video → no crash (upsert)
+- [ ] Restart app → indexed data persists
 
 ---
 
-## 9. CI/CD
+## 8. Performance Tuning
 
-**Not configured.** No Dockerfile, no `.github/workflows/`, no `Makefile`, no `tox.ini`, no `pyproject.toml`.
-
----
-
-## 10. Performance Tuning
-
-| Parameter | Default | Tuning Guidance |
-|---|---|---|
-| Frame interval | 1 second | Increase to 2–5s for long videos to reduce frame count |
-| Batch size (GPU) | 32 | Reduce if CUDA OOM errors occur |
-| Batch size (CPU) | 4 | Increase to 8–16 if RAM permits |
-| Max results (`k`) | 6 | Increase for broader search recall |
-| Threshold | 160.0 | Decrease for stricter matches; increase for more results |
-
-**Evidence:** `app.py:L88`, `app.py:L76 (interval=1)`, `app.py:L128–L129`
+| Parameter | Default | Evidence | Guidance |
+|---|---|---|---|
+| Frame interval | 1 sec | `app.py:L97` | Increase for long videos |
+| Batch size (GPU) | 32 | `app.py:L107` | Reduce if CUDA OOM |
+| Batch size (CPU) | 4 | `app.py:L107` | Increase if RAM permits |
+| Max results (k) | 6 | `app.py:L150` | Increase for broader recall |
+| Threshold | 160.0 | `app.py:L151` | Decrease for stricter matches |
 
 ---
 
-## 11. Known Issues / Gotchas
+## 9. Logging
 
-1. **CWD affects frame display:** Frame paths in ChromaDB metadata are stored as CWD-relative strings. If you launch from a different directory, the DB will work fine (path is `__file__`-relative) but search result images may not display because `os.path.exists(res['path'])` will fail. Run from the repo root.
-2. **Re-indexing same video:** Uses `upsert()` so duplicate IDs are safely overwritten. Old frames from a previous extraction with different timestamps will remain as orphans in the DB. To clean up: delete `video_db_storage/` and re-process.
-3. **No version pins:** `requirements.txt` has no `==` constraints — a fresh install may pull breaking changes.
-4. **No tests / CI:** All validation is manual.
-5. **Pre-existing frame data:** Two frame sets exist in `data/frames/` but may not be indexed in `video_db_storage/` — search results will be empty until re-indexed.
-6. **First run download:** CLIP model (~350 MB) downloads on first `FrameEmbedder` instantiation. Plan for network access.
+All modules use Python `logging` at INFO level:
+
+```
+INFO | src.embedder | Initializing FrameEmbedder...
+INFO | src.vector_db | Connected to ChromaDB at …
+INFO | src.video_processor | (errors only)
+```
+
+Configure via `logging.basicConfig()` in `app.py:L11` or `main.py:L8`.
+
+---
+
+## 10. Known Gotchas
+
+1. **Frame paths are CWD-relative** in ChromaDB metadata. Run from the repo root.
+2. **Orphan frames** remain in DB after re-extraction with different timestamps. Delete `video_db_storage/` to reset.
+3. **No version pins** — fresh install may pull incompatible packages.
+4. **First-run download** — CLIP model (~350 MB) needs internet on first launch.

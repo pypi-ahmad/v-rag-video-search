@@ -1,80 +1,66 @@
-# V-RAG — Quick Wins (Patch Suggestions)
+# V-RAG — Quick Wins
 
-> These are concrete, copy-paste-ready code changes for the highest-priority issues. Each one is small, safe, and independently shippable.
-
----
-
-## QW-1: Sanitize uploaded filename (P0 — Security) ✅ DONE
-
-**Implemented in:** `app.py:L65` — `safe_name = pathlib.Path(uploaded_file.name).name`
+> All items below are either completed or copy-paste-ready for remaining work.
 
 ---
 
-## QW-2: Fix DB path to be `__file__`-relative (P0 — Reliability) ✅ DONE
+## QW-1: Sanitize uploaded filename ✅ DONE
 
-**Implemented in:** `src/vector_db.py:L14,L22` — `_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent`; `db_path = str(_PROJECT_ROOT / "video_db_storage")`
+`app.py:L67` — `safe_name = pathlib.Path(uploaded_file.name).name`
 
----
+## QW-2: Fix DB path to `__file__`-relative ✅ DONE
 
-## QW-3: Use `upsert()` instead of `add()` (P1 — Correctness) ✅ DONE
+`src/vector_db.py:L11,L21` — `_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent`
 
-**Implemented in:** `src/vector_db.py:L52` — `self.collection.upsert(...)`
+## QW-3: Use `upsert()` instead of `add()` ✅ DONE
 
----
+`src/vector_db.py:L50` — `self.collection.upsert(…)`
 
-## QW-4: Fix embedding/metadata alignment (P0 — Correctness) ✅ DONE
+## QW-4: Fix embedding/metadata alignment ✅ DONE
 
-**Implemented in:**
-- `src/embedder.py:L32–L85` — `encode_images()` returns `Tuple[np.ndarray, List[str]]`; empty return is `np.empty((0, 512), dtype=np.float32)`
-- `app.py:L108–L113` — order-preserving `meta_by_path` dict rebuild
-- `main.py:L68–L72` — same pattern
-- `src/vector_db.py:L34–L41` — empty-embeddings guard + `ValueError` on mismatch
+`src/embedder.py:L31–L87` returns `Tuple[np.ndarray, List[str]]`. Callers use `meta_by_path` dict (`app.py:L112–L118`, `main.py:L76–L80`).
 
----
+## QW-5: Clean up temp files ✅ DONE
 
-## QW-5: Clean up temp files (P1 — Resource Leak) ✅ DONE
+`app.py:L145–L148` — uploaded video deleted in `try/finally`.
+`app.py:L190–L193` — query image deleted in `try/finally`.
 
-**Implemented in:**
-- **Uploaded video cleanup:** `app.py:L155–L160` — `try/finally` with `os.remove(video_path)` after pipeline
-- **Query image cleanup:** `app.py:L199–L206` — `try/finally` with `os.remove(temp_query_path)` after embedding
+## QW-6: Fix deprecated `st.image` parameter ✅ DONE
 
----
+`app.py:L224` — `use_container_width=True`
 
-## QW-6: Fix deprecated `st.image` parameter (P1 — Deprecation) ✅ DONE
+## QW-7: Remove unused imports + dead variables ✅ DONE
 
-**Implemented in:** `app.py:L224` — `st.image(res['path'], use_container_width=True)`
+`src/embedder.py:L5` — `Union` and `os` removed. Dead `total_batches` removed.
+`src/video_processor.py` — Dead `saved_count` removed.
 
----
+## QW-8: Delete commented-out code ✅ DONE
 
-## QW-7: Remove unused imports + dead variables (P2 — Lint) ✅ DONE
+Dead comment blocks removed from `app.py`.
 
-**Implemented in:**
-- `src/embedder.py:L5` — `Union` and `os` removed; imports are now `List, Tuple`
-- `src/embedder.py` — dead `total_batches` variable removed
-- `src/video_processor.py:L49` — dead `saved_count` variable removed
+## QW-9: Replace all `print()` with `logging` ✅ DONE
 
----
+`src/embedder.py:L19–L27`, `src/video_processor.py:L87`, `main.py` — all converted.
 
-## QW-8: Delete commented-out code (P2 — Dead Code) ✅ DONE
+## QW-10: Stable temp paths ✅ DONE
 
-**Implemented in:** `app.py` — commented-out DB reset lines and camera image display line removed.
+`app.py:L60–L62` — `temp_uploads/` now `__file__`-relative.
+`app.py:L182` — `temp_query.jpg` now `__file__`-relative.
 
 ---
 
-## TODO Comments to Add
-
-These should be inserted directly in the source as reminders for future work:
+## Remaining TODOs
 
 ```python
-# app.py:L76 — above process_video_pipeline's extract call:
-# TODO: Run extraction + embedding in a background thread to avoid blocking Streamlit UI
+# requirements.txt — Pin all dependency versions
+# TODO: pip freeze > requirements.txt
 
-# src/vector_db.py:L18 — above get_or_create_collection:
-# TODO: Explicitly set distance metric: metadata={"hnsw:space": "cosine"} or "l2"
+# app.py:L52–L54 — Extract magic numbers to constants or config
+# SCORE_HIGH, SCORE_MED = 135, 145
 
-# src/embedder.py:L10 — in __init__:
-# TODO: Add normalize_embeddings=True to encode() calls for consistent distance behavior
+# src/vector_db.py:L25 — Explicitly set distance metric
+# metadata={"hnsw:space": "cosine"}
 
-# requirements.txt:L1 — at top:
-# TODO: Pin all dependency versions for reproducible builds
+# src/embedder.py:L73 — Consider normalize_embeddings=True
+# model.encode(…, normalize_embeddings=True)
 ```
