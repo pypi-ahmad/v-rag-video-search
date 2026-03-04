@@ -36,6 +36,12 @@ Local, semantic video search: **upload a video → extract frames → embed with
 - [Configuration](#️-configuration)
 - [Troubleshooting](#-troubleshooting)
 
+### Feature highlights
+
+| 🚀 Local-first | 🧠 Multimodal retrieval | ⚡ Production-ready UX | 🛡️ Safe indexing |
+|---|---|---|---|
+| Run fully on your machine with no cloud dependency. | Search with both text prompts and camera/image queries. | Streamlit UI, CI checks, and practical troubleshooting docs. | Idempotent upserts, stable paths, and temp-file cleanup built in. |
+
 ---
 
 ## ✨ What you can do
