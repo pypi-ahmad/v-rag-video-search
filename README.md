@@ -34,11 +34,11 @@ Local, semantic video search: **upload a video → extract frames → embed with
 
 ```mermaid
 flowchart LR
-  UI[Streamlit UI<br/>app.py] --> VP[VideoProcessor<br/>src/video_processor.py]
-  UI --> EMB[FrameEmbedder (CLIP)<br/>src/embedder.py]
-  UI --> DB[VideoSearchDB (ChromaDB)<br/>src/vector_db.py]
+  UI["Streamlit UI\napp.py"] --> VP["VideoProcessor\nsrc/video_processor.py"]
+  UI --> EMB["FrameEmbedder (CLIP)\nsrc/embedder.py"]
+  UI --> DB["VideoSearchDB (ChromaDB)\nsrc/vector_db.py"]
 
-  VP --> FS[(Frames on disk<br/>data/frames/...)]
+  VP --> FS["Frames on disk\ndata/frames/..."]
   EMB --> DB
   DB --> UI
 ```
