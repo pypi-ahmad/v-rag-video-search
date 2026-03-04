@@ -1,7 +1,10 @@
 import cv2
-import os
+import logging
 import math
+import os
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 class VideoProcessor:
     def __init__(self):
@@ -41,7 +44,6 @@ class VideoProcessor:
 
         metadata = []
         frame_count = 0
-        saved_count = 0
 
         try:
             while True:
@@ -78,12 +80,11 @@ class VideoProcessor:
                         'frame_path': file_path,
                         'timestamp': timestamp_ms / 1000.0  # Convert to seconds for easier reading usually
                     })
-                    saved_count += 1
 
                 frame_count += 1
 
         except Exception as e:
-            print(f"Error processing video: {e}")
+            logger.error("Error processing video: %s", e, exc_info=True)
         finally:
             cap.release()
             

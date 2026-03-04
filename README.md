@@ -1,109 +1,241 @@
-# 🚦 V-RAG: Semantic Video Search Engine
-> **Visual Retrieval Augmented Generation** for Traffic & Surveillance Analysis.
+# V-RAG — Video Search (Retrieval-Augmented Generation for Video)
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![AI](https://img.shields.io/badge/AI-CLIP%20%2B%20Vector%20Search-orange)
-![Stack](https://img.shields.io/badge/Stack-Streamlit%20%7C%20ChromaDB%20%7C%20OpenCV-green)
+Local, semantic video search: **upload a video → extract frames → embed with CLIP → store in ChromaDB → search by text or image**.
 
-## 📖 Overview
-**V-RAG** is a multimodal AI system that allows users to search inside video files using natural language. Unlike traditional object detection (which just finds "car"), V-RAG understands semantic context (e.g., *"aggressive driving"*, *"red car turning left"*, or *"empty road at night"*).
-
-It uses **OpenAI's CLIP model** to map video frames and text queries into a shared vector space, storing them in **ChromaDB** for millisecond-scale retrieval.
-
-### 🌟 Key Features
-* **🧠 Semantic Search:** Search for concepts, actions, and objects using plain English.
-* **📸 Visual Query:** Use your webcam or an upload to find "similar looking frames" (Reverse Image Search).
-* **⚡ RAG Pipeline:** Automated ingestion pipeline (Extract → Embed → Index).
-* **🏎️ High Performance:** Optimized for GPU acceleration but runs smoothly on CPU.
-* **🎛️ Interactive Dashboard:** Built with Streamlit for real-time analysis.
+🔗 **Repository:** https://github.com/pypi-ahmad/v-rag-video-search.git
 
 ---
 
-## 🛠️ Tech Stack
-| Component | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Embeddings** | `sentence-transformers` (CLIP ViT-B-32) | Converts images/text to 512-dim vectors. |
-| **Vector DB** | `ChromaDB` | Stores vectors and enables similarity search. |
-| **Vision** | `OpenCV` | Efficient video frame extraction and processing. |
-| **Frontend** | `Streamlit` | Interactive UI for upload, search, and visualization. |
-| **Backend** | `Python` | Core logic and orchestration. |
+## ✨ What you can do
+
+- **Index videos locally** (frame extraction + embeddings)
+- **Search by text** ("a red car", "people walking", "night traffic")
+- **Search by image/camera** (find visually similar frames)
+- **Re-run indexing safely** (idempotent DB writes via upsert)
+- **Stable local storage paths** (DB path doesn't depend on where you run the app)
+- **Auto cleanup of temporary files** (staged uploads / query images)
+
+> No hosted backend. No cloud required. Everything runs on your machine.
 
 ---
 
-## ⚙️ Architecture
-The system follows a standard **RAG (Retrieval Augmented Generation)** pattern adapted for Video:
+## 🧠 How it works
 
-1.  **Ingestion:**
-    * Video is sliced into frames (e.g., 1 frame/sec).
-    * Frames are resized to 640px for efficiency.
-2.  **Indexing:**
-    * **CLIP** encodes every frame into a vector.
-    * Vectors + Metadata (Timestamp) are stored in **ChromaDB**.
-3.  **Retrieval:**
-    * User inputs Text or Image.
-    * Input is converted to a vector.
-    * DB calculates **Cosine Similarity** (or L2 Distance) to find the nearest frames.
+### High-level pipeline
+1. **Video → frames** (e.g., ~1 FPS sampling)
+2. **Frames → embeddings** using CLIP
+3. **Embeddings → ChromaDB** (vector search index)
+4. **Query (text or image) → embedding → nearest neighbors**
+5. Show **matching frames + timestamps + score**
 
 ---
 
-## 🚀 Quick Start
+## 🧩 Architecture
 
-### 1. Clone & Install
+```mermaid
+flowchart LR
+  UI[Streamlit UI<br/>app.py] --> VP[VideoProcessor<br/>src/video_processor.py]
+  UI --> EMB[FrameEmbedder (CLIP)<br/>src/embedder.py]
+  UI --> DB[VideoSearchDB (ChromaDB)<br/>src/vector_db.py]
+
+  VP --> FS[(Frames on disk<br/>data/frames/...)]
+  EMB --> DB
+  DB --> UI
+```
+
+---
+
+## 🔁 Runtime flows
+
+### 1) Ingestion (Upload → Index)
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant S as Streamlit (app.py)
+  participant V as VideoProcessor
+  participant E as FrameEmbedder (CLIP)
+  participant C as ChromaDB (VideoSearchDB)
+  participant F as Filesystem (data/frames)
+
+  U->>S: Upload video + click Process
+  S->>V: extract_frames(video)
+  V->>F: write JPG frames
+  S->>E: encode_images(frame_paths)
+  E-->>S: embeddings + valid_paths
+  S->>C: upsert(ids, embeddings, metadata)
+  C-->>S: stored
+  S-->>U: Success + ready to search
+```
+
+### 2) Search (Text/Image → Results)
+
+```mermaid
+flowchart TD
+  Q[Query: text OR image] --> EQ[Embed query (CLIP)]
+  EQ --> VS[Vector search (ChromaDB)]
+  VS --> R[Top-K results]
+  R --> UI[Render frames + timestamps + scores]
+```
+
+---
+
+## 📁 Project layout
+
+```text
+.
+├── app.py                     # Streamlit UI entrypoint
+├── main.py                    # Optional CLI/dev entrypoint
+├── src/
+│   ├── __init__.py
+│   ├── video_processor.py     # Frame extraction
+│   ├── embedder.py            # CLIP embedder (text + image)
+│   └── vector_db.py           # ChromaDB wrapper (upsert + search)
+├── data/
+│   ├── videos/                # Optional: your raw videos (ignored by git)
+│   └── frames/                # Generated frames (ignored by git)
+├── video_db_storage/          # ChromaDB local storage (ignored by git)
+└── requirements.txt
+```
+
+---
+
+## ⚡ Quickstart
+
+### 1) Clone
+
 ```bash
 git clone https://github.com/pypi-ahmad/v-rag-video-search.git
 cd v-rag-video-search
+```
 
-# Create virtual environment
+### 2) Create a virtual environment
+
+**Windows (PowerShell)**
+
+```bash
 python -m venv .venv
-# Activate:
-# Windows:
-.venv\Scripts\activate
-# Mac/Linux:
-source .venv/bin/activate
+.venv\Scripts\Activate.ps1
+```
 
-# Install dependencies
+**macOS/Linux**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### 3) Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run the App
+### 4) Run the app
 
 ```bash
 streamlit run app.py
 ```
 
-### 3. Usage
+---
 
-1. Open the app in your browser (`http://localhost:8501`).
-2. **Upload a Video** (Side Panel) or use the default data.
-3. Click **"Process & Index"** to build the database.
-4. Type a query (e.g., *"traffic jam"*) or take a photo to search!
+## ✅ Usage
+
+### Index a video
+
+1. Open the Streamlit UI
+2. Upload a video file
+3. Click **Process / Index**
+4. Wait for extraction + embedding + DB upsert
+
+**Generated data**
+
+* Frames are written to: `data/frames/<video_name>/...`
+* Vector DB lives in: `video_db_storage/`
+
+### Search by text
+
+* Type a query like:
+
+  * `"traffic at night"`
+  * `"a person walking"`
+  * `"red car"`
+* Adjust:
+
+  * **Top-K** results
+  * **Score threshold** (if available in UI)
+
+### Search by image/camera
+
+* Use the camera input (or image input if supported)
+* The app embeds the query image and retrieves nearest frames
+* Temporary query images are cleaned up automatically
 
 ---
 
-## 📂 Project Structure
+## 🧹 Reset / cleanup
 
-```text
-V-RAG/
-├── data/
-│   ├── videos/          # Raw video files
-│   └── frames/          # Extracted frames (auto-generated)
-├── src/
-│   ├── embedder.py      # CLIP model wrapper
-│   ├── video_processor.py # OpenCV frame extraction
-│   └── vector_db.py     # ChromaDB manager
-├── video_db_storage/    # Persistent Vector Database
-├── app.py               # Main Streamlit Dashboard
-├── main.py              # CLI Driver (Optional)
-└── requirements.txt     # Dependencies
+If you want a fresh start:
+
+```bash
+# remove generated frames + vector DB
+rm -rf data/frames video_db_storage temp_uploads
 ```
 
-## 🔮 Future Improvements
+(Windows PowerShell)
 
-* **Temporal Search:** analyzing sequences of frames (using LSTMs or VideoMAE) to detect actions like "crash" or "u-turn".
-* **Object Tracking:** Integrating YOLOv8 to track specific object IDs across frames.
-* **Live Stream:** Adapting the pipeline for real-time RTSP streams.
+```powershell
+Remove-Item -Recurse -Force data\frames, video_db_storage, temp_uploads
+```
 
 ---
 
-**Author:** [Your Name]
+## 🛠 Troubleshooting
+
+### OpenCV / video decode issues
+
+* Try a smaller MP4
+* Ensure `opencv-python` is installed via `requirements.txt`
+
+### Slow indexing
+
+* Indexing speed depends on:
+
+  * video length
+  * frame sampling frequency
+  * CPU/GPU availability for embeddings
+
+### "No results" or low match quality
+
+* Try broader text prompts
+* Reduce threshold / increase Top-K
+* Use an image query closer to your target scene
+
+---
+
+## 🧭 Roadmap ideas (optional)
+
+* Multi-video library view + per-video filters
+* Jump-to-timestamp video playback
+* Scene-change/keyframe sampling instead of fixed FPS
+* Audio transcript search (speech-to-text) + hybrid retrieval
+
+---
+
+## 🤝 Contributing
+
+PRs and issues welcome:
+
+* Bug reports: include OS + Python version + a minimal repro video/query
+* Feature requests: include a concrete workflow and expected UX
+
+---
+
+## 📄 License
+
+Add a license file if you plan to publish widely (MIT/Apache-2.0 etc).
+
+---
+
+**Author:** Ahmad Mujtaba
 *Built as a Portfolio Project demonstrating Multimodal AI & Vector Search.*

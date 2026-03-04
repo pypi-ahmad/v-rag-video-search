@@ -1,10 +1,15 @@
 import streamlit as st
+import logging
 import os
+import pathlib
 import torch
 from PIL import Image
 import cv2
 import time
 import shutil
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+logger = logging.getLogger(__name__)
 
 # Import our backend modules
 from src.embedder import FrameEmbedder
@@ -46,18 +51,22 @@ def interpret_score(score):
     else: return "⚠️ Low Confidence", "red"
 
 def save_uploaded_file(uploaded_file):
-    """Saves uploaded video to a temp path."""
+    """Saves uploaded video to a temp path (filename is sanitized)."""
     try:
-        # Create temp dir
-        if not os.path.exists("temp_uploads"):
-            os.makedirs("temp_uploads")
+        # Create temp dir (anchored to this file, not CWD)
+        _app_dir = os.path.dirname(os.path.abspath(__file__))
+        temp_dir = os.path.join(_app_dir, "temp_uploads")
+        os.makedirs(temp_dir, exist_ok=True)
         
-        file_path = os.path.join("temp_uploads", uploaded_file.name)
+        # Sanitize: strip any directory components from the user-supplied name
+        safe_name = pathlib.Path(uploaded_file.name).name
+        file_path = os.path.join(temp_dir, safe_name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         return file_path
     except Exception as e:
         st.error(f"Error saving file: {e}")
+        logger.exception("Failed to save uploaded file")
         return None
 
 def process_video_pipeline(video_path):
@@ -95,16 +104,24 @@ def process_video_pipeline(video_path):
     # Determine batch size based on GPU/CPU
     batch_size = 32 if torch.cuda.is_available() else 4
     
-    # Embed
-    embeddings = embedder.encode_images(image_paths, batch_size=batch_size)
+    # Embed — returns only the paths that were successfully loaded
+    embeddings, valid_paths = embedder.encode_images(image_paths, batch_size=batch_size)
     progress_bar.progress(70)
+
+    if embeddings.shape[0] == 0:
+        st.error("No frames could be embedded. Check that extracted images are valid.")
+        return False
+
+    # Rebuild metadata aligned to valid_paths (preserves row order)
+    meta_by_path = {m['frame_path']: m for m in metadata}
+    metadata = [meta_by_path[p] for p in valid_paths if p in meta_by_path]
+    assert len(embeddings) == len(metadata), (
+        f"Alignment check failed: {len(embeddings)} embeddings vs {len(metadata)} metadata"
+    )
 
     # 4. Index in DB
     status_text.text("💾 Saving to Vector Database...")
     db = get_db()
-    # Optional: We could reset the DB here if we wanted a fresh start
-    # db.client.delete_collection("video_frames") 
-    # db.collection = db.client.create_collection("video_frames")
     
     db.add_frames(embeddings, metadata)
     progress_bar.progress(100)
@@ -131,9 +148,16 @@ def main():
                     with st.spinner("Initializing Pipeline..."):
                         video_path = save_uploaded_file(uploaded_file)
                         if video_path:
-                            success = process_video_pipeline(video_path)
-                            if success:
-                                st.balloons()
+                            try:
+                                success = process_video_pipeline(video_path)
+                                if success:
+                                    st.balloons()
+                            finally:
+                                # Clean up the staged temp upload
+                                try:
+                                    os.remove(video_path)
+                                except OSError:
+                                    pass
         
         st.divider()
         st.subheader("2. Search Settings")
@@ -159,8 +183,6 @@ def main():
         img_file_buffer = st.camera_input("Take a picture")
         
         if img_file_buffer is not None:
-            # Display the query image
-            # st.image(img_file_buffer, caption="Your Query", width=200)
             if st.button("Search Image"):
                 # Convert buffer to PIL Image
                 image = Image.open(img_file_buffer)
@@ -177,17 +199,22 @@ def perform_search(query_input, k, threshold, mode="text"):
             if mode == "text":
                 query_emb = embedder.encode_text(query_input)
             else:
-                # Image embedding (wrap in list because encode_images expects list)
-                # Save temp image because our embedder expects paths (or we can modify embedder, 
-                # but saving is safer for your current code structure)
-                temp_query_path = "temp_query.jpg"
-                query_input.save(temp_query_path)
-                # We need to adapt embedder slightly or just load it here.
-                # Since your `embedder.py` expects paths, let's use the path.
-                # Actually, `sentence-transformers` handles PIL images directly mostly, 
-                # but your wrapper `encode_images` expects paths. 
-                # Let's rely on the path method you built.
-                query_emb = embedder.encode_images([temp_query_path], batch_size=1)[0] # Take 1st item
+                # Image embedding — save temp image because our embedder expects paths
+                # Use __file__-relative path so it works regardless of CWD
+                temp_query_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp_query.jpg")
+                try:
+                    query_input.save(temp_query_path)
+                    query_embs, _ = embedder.encode_images([temp_query_path], batch_size=1)
+                    if query_embs.shape[0] == 0:
+                        st.error("Could not encode the query image. Please try again.")
+                        return
+                    query_emb = query_embs[0]
+                finally:
+                    # Always clean up the temp file
+                    try:
+                        os.remove(temp_query_path)
+                    except OSError:
+                        pass
 
             # 2. Search DB
             raw_results = db.search(query_emb, k=k)
@@ -208,7 +235,7 @@ def perform_search(query_input, k, threshold, mode="text"):
                 for idx, res in enumerate(batch):
                     with cols[idx]:
                         if os.path.exists(res['path']):
-                            st.image(res['path'], width='stretch')
+                            st.image(res['path'], use_container_width=True)
                             
                             # Info
                             time_str = format_timestamp(res['timestamp'])

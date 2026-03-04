@@ -1,41 +1,54 @@
+import logging
+import pathlib
+
 import chromadb
-import os
 import numpy as np
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+# Stable project root — two levels up from src/vector_db.py
+_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 class VideoSearchDB:
     def __init__(self, collection_name: str = "video_frames"):
         """
         Initializes a persistent ChromaDB client.
         """
-        # Create storage folder in the current working directory
-        db_path = os.path.join(os.getcwd(), "video_db_storage")
-        if not os.path.exists(db_path):
-            os.makedirs(db_path, exist_ok=True)
+        # Stable path anchored to the project root (not CWD)
+        db_path = str(_PROJECT_ROOT / "video_db_storage")
+        pathlib.Path(db_path).mkdir(parents=True, exist_ok=True)
             
         self.client = chromadb.PersistentClient(path=db_path)
         self.collection = self.client.get_or_create_collection(name=collection_name)
-        print(f"Connected to ChromaDB at {db_path}, collection: '{collection_name}'")
+        logger.info("Connected to ChromaDB at %s, collection: '%s'", db_path, collection_name)
 
     def add_frames(self, embeddings: np.ndarray, metadata: List[Dict[str, Any]]):
         """
-        Adds embeddings and metadata to the ChromaDB collection.
+        Adds (or updates) embeddings and metadata in the ChromaDB collection.
         """
+        if len(embeddings) == 0:
+            logger.warning("add_frames called with 0 embeddings — skipping.")
+            return
+
         if len(embeddings) != len(metadata):
-            raise ValueError(f"Mismatch: {len(embeddings)} embeddings vs {len(metadata)} metadata items.")
+            raise ValueError(
+                f"embedding/metadata length mismatch: "
+                f"{len(embeddings)} embeddings vs {len(metadata)} metadata items."
+            )
         
         # Use filename as unique ID
-        ids = [os.path.basename(m['frame_path']) for m in metadata]
+        ids = [pathlib.Path(m['frame_path']).name for m in metadata]
         
         # Convert numpy array to list for ChromaDB
         embeddings_list = embeddings.tolist()
         
-        self.collection.add(
+        self.collection.upsert(
             embeddings=embeddings_list,
             metadatas=metadata,
             ids=ids
         )
-        print(f"Added {len(embeddings)} frames to the database.")
+        logger.info("Upserted %d frames to the database.", len(embeddings))
 
     def search(self, query_embedding: np.ndarray, k: int = 5) -> List[Dict[str, Any]]:
         """
