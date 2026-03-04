@@ -15,14 +15,14 @@ class FrameEmbedder:
         Detects if GPU is available and moves the model to the appropriate device.
         """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(f"Initializing FrameEmbedder...")
-        print(f"Device detected: {self.device}")
+        logger.info("Initializing FrameEmbedder...")
+        logger.info("Device detected: %s", self.device)
         
         try:
             self.model = SentenceTransformer(model_name, device=self.device)
-            print(f"Model '{model_name}' loaded successfully.")
+            logger.info("Model '%s' loaded successfully.", model_name)
         except Exception as e:
-            print(f"Error loading model '{model_name}': {e}")
+            logger.error("Error loading model '%s': %s", model_name, e)
             raise
 
     def encode_images(
