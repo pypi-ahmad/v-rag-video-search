@@ -1,10 +1,40 @@
-# V-RAG — Video Semantic Search (CLIP + ChromaDB)
+<h1 align="center">V-RAG — Video Semantic Search</h1>
+
+<p align="center">
+  CLIP-powered local video retrieval with Streamlit + ChromaDB
+</p>
+
+<p align="center">
+  <a href="https://github.com/pypi-ahmad/v-rag-video-search/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/pypi-ahmad/v-rag-video-search/ci.yml?branch=main&label=CI"></a>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white">
+  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green.svg">
+</p>
+
+<p align="center">
+  <img alt="Tech Icons" src="https://skillicons.dev/icons?i=python,pytorch,opencv,github,githubactions&perline=8" />
+</p>
+
+<p align="center">
+  <img alt="CLIP" src="https://img.shields.io/badge/CLIP-Multimodal_Embeddings-111111">
+  <img alt="ChromaDB" src="https://img.shields.io/badge/ChromaDB-Vector_Search-7B61FF">
+  <img alt="Sentence Transformers" src="https://img.shields.io/badge/sentence--transformers-Embeddings-FF8A00">
+</p>
 
 Local, semantic video search: **upload a video → extract frames → embed with CLIP → store in ChromaDB → search by text or image**.
 
 > This repository currently focuses on **retrieval/search**. A generation (LLM) layer can be added on top of retrieved frames.
 
 🔗 **Repository:** https://github.com/pypi-ahmad/v-rag-video-search.git
+
+### Quick links
+
+- [What you can do](#-what-you-can-do)
+- [Architecture](#-architecture)
+- [Runtime flows](#-runtime-flows)
+- [Quickstart](#-quickstart)
+- [Configuration](#️-configuration)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
