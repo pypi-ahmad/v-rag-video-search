@@ -181,8 +181,6 @@ def main():
         img_file_buffer = st.camera_input("Take a picture")
         
         if img_file_buffer is not None:
-            # Display the query image
-            # st.image(img_file_buffer, caption="Your Query", width=200)
             if st.button("Search Image"):
                 # Convert buffer to PIL Image
                 image = Image.open(img_file_buffer)
