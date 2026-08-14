@@ -330,3 +330,5 @@ MIT — see [LICENSE](LICENSE).
 
 **Author:** Ahmad Mujtaba
 *Built as a Portfolio Project demonstrating Multimodal AI & Vector Search.*
+
+<p align="center">Made with ❤️ by Ahmad Mujtaba</p>
